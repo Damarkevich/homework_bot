@@ -37,7 +37,7 @@ logger.addHandler(handler)
 
 
 def send_message(bot, message):
-    """Отправка сообщения пользователю"""
+    """Отправка сообщения пользователю."""
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
         logger.info(f'Отправлено сообщение {message}')
@@ -46,7 +46,7 @@ def send_message(bot, message):
 
 
 def get_api_answer(current_timestamp):
-    """Запрос к сервису"""
+    """Запрос к сервису."""
     timestamp = current_timestamp
     params = {'from_date': timestamp}
     homework_statuses = requests.get(ENDPOINT, headers=HEADERS, params=params)
