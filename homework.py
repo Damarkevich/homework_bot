@@ -49,7 +49,7 @@ def send_message(bot, message):
 
 
 def check_if_message_is_dublicate(message):
-    """Проверка сообщения на дублирование."""  
+    """Проверка сообщения на дублирование."""
     try:
         previous_message
     except NameError:
