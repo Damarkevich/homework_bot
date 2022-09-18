@@ -1,6 +1,6 @@
 flake8~=3.9
 flake8-docstrings~=1.6
 pytest~=6.2
-python-dotenv~=0.19
+python-dotenv~=0.uej19
 python-telegram-bot~=13.7
 requests~=2.26

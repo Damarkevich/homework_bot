@@ -8,6 +8,7 @@ from logging import StreamHandler
 import requests
 from dotenv import load_dotenv
 from telegram import Bot
+from telegram.error import TelegramError
 
 load_dotenv()
 
@@ -38,17 +39,28 @@ logger.addHandler(handler)
 
 def send_message(bot, message):
     """Отправка сообщения пользователю."""
+    if check_if_message_is_dublicate(message):
+        return False
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
         logger.info(f'Отправлено сообщение {message}')
-    except Exception:
+    except TelegramError:
         logger.exception(f'Не удается отправить сообщение: {message}')
+
+
+def check_if_message_is_dublicate(message):
+    try:
+        previous_message
+    except NameError:
+        previous_message = ''
+    if previous_message == message:
+        return False
+    return True
 
 
 def get_api_answer(current_timestamp):
     """Запрос к сервису."""
-    timestamp = current_timestamp
-    params = {'from_date': timestamp}
+    params = {'from_date': current_timestamp}
     homework_statuses = requests.get(ENDPOINT, headers=HEADERS, params=params)
     if homework_statuses.status_code != HTTPStatus.OK:
         raise Exception(
@@ -64,7 +76,7 @@ def check_response(response):
         homeworks = response['homeworks']
     except KeyError:
         raise KeyError('Отсутствует необходимый ключ "homework"')
-    if type(homeworks) is not list:
+    if not isinstance(homeworks, list):
         raise Exception('По ключу "homeworks" получен не список')
     return homeworks
 
@@ -76,6 +88,7 @@ def parse_status(homework):
         homework_status = homework['status']
     except KeyError:
         raise KeyError('Отсутствует необходимый ключ в домашней работе')
+
     try:
         verdict = HOMEWORK_STATUSES[homework_status]
     except KeyError:
@@ -97,26 +110,25 @@ def check_tokens():
 
 def main():
     """Основная логика работы бота."""
-    if check_tokens():
-        bot = Bot(token=TELEGRAM_TOKEN)
-        current_timestamp = int(time.time())
-        while True:
-            try:
-                response = get_api_answer(current_timestamp)
-                if check_response(response):
-                    homework = response['homeworks'][0]
-                    message = parse_status(homework)
-                    send_message(bot, message)
-                else:
-                    logger.debug('Статус домашней работы не изменился')
-                current_timestamp = response.get('current_date')
-                time.sleep(RETRY_TIME)
-
-            except Exception as error:
-                message = f'Сбой в работе программы: {error}'
-                logger.exception(message)
+    if not check_tokens():
+        return False
+    bot = Bot(token=TELEGRAM_TOKEN)
+    current_timestamp = int(time.time())
+    while True:
+        try:
+            response = get_api_answer(current_timestamp)
+            if check_response(response):
+                homework = response['homeworks'][0]
+                message = parse_status(homework)
                 send_message(bot, message)
-                time.sleep(RETRY_TIME)
+            else:
+                logger.info('Статус домашней работы не изменился')
+            current_timestamp = response.get('current_date')
+        except Exception as error:
+            message = f'Сбой в работе программы: {error}'
+            logger.exception(message)
+            send_message(bot, message)
+        time.sleep(RETRY_TIME)
 
 
 if __name__ == '__main__':
