@@ -39,24 +39,11 @@ logger.addHandler(handler)
 
 def send_message(bot, message):
     """Отправка сообщения пользователю."""
-    if check_if_message_is_dublicate(message):
-        return False
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
         logger.info(f'Отправлено сообщение {message}')
     except TelegramError:
         logger.exception(f'Не удается отправить сообщение: {message}')
-
-
-def check_if_message_is_dublicate(message):
-    """Проверка сообщения на дублирование."""
-    try:
-        previous_message
-    except NameError:
-        previous_message = ''
-    if previous_message == message:
-        return False
-    return True
 
 
 def get_api_answer(current_timestamp):
@@ -112,23 +99,28 @@ def check_tokens():
 def main():
     """Основная логика работы бота."""
     if not check_tokens():
-        return False
+        sys.exit('Программа остановлена. Отсутствуют нужные токены.')
     bot = Bot(token=TELEGRAM_TOKEN)
     current_timestamp = int(time.time())
+    previous_message = ''
     while True:
         try:
             response = get_api_answer(current_timestamp)
             if check_response(response):
                 homework = response['homeworks'][0]
                 message = parse_status(homework)
-                send_message(bot, message)
+                if previous_message != message:
+                    send_message(bot, message)
+                    previous_message = message
             else:
-                logger.info('Статус домашней работы не изменился')
+                logger.info('Полученный список домашних работ пуст')
             current_timestamp = response.get('current_date')
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             logger.exception(message)
-            send_message(bot, message)
+            if previous_message != message:
+                send_message(bot, message)
+                previous_message = message
         time.sleep(RETRY_TIME)
 
 
